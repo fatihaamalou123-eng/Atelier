@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion Stagiaires</title>
+    <style>
+        table { border-collapse: collapse; width: 90%; margin-top: 20px; }
+        th, td { border: 1px solid black; padding: 10px; text-align: center; }
+        th { background-color: #f2f2f2; }
+        .box { margin-bottom: 20px; padding: 15px; border: 1px solid #ccc; width: 90%; background: #fafafa; }
+        input { padding: 5px; margin: 2px; }
+        button { cursor: pointer; padding: 5px 10px; }
+        .btn-del { color: red; }
+    </style>
+</head>
+<body>
+
+<h2>Ajouter un stagiaire</h2>
+<div class="box">
+    <input id="id" placeholder="ID (N° Inscription)">
+    <input id="nom" placeholder="Nom">
+    <input id="prenom" placeholder="Prénom">
+    <input id="age" placeholder="Age">
+    <input id="filiere" placeholder="Filière">
+    <input id="groupe" placeholder="Groupe">
+    <button onclick="addStagiaire()">Ajouter</button>
+</div>
+
+<h2>Modifier un stagiaire</h2>
+<div class="box">
+    <input id="mid" placeholder="ID stagiaire à modifier">
+    <input id="mfiliere" placeholder="Nouvelle filière">
+    <input id="mgroupe" placeholder="Nouveau groupe">
+    <button onclick="updateStagiaire()">Modifier</button>
+</div>
+
+<h2>Liste des stagiaires</h2>
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Nom</th>
+            <th>Prénom</th>
+            <th>Age</th>
+            <th>Filière</th>
+            <th>Groupe</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody id="table"></tbody>
+</table>
+
+<script>
+    // --- 1. Classes ---
+    class Personne {
+        constructor(nom, prenom, age) {
+            this.nom = nom;
+            this.prenom = prenom;
+            this.age = age;
+        }
+    }
+
+    class Stagiaire extends Personne {
+        constructor(nom, prenom, age, id, filiere, groupe) {
+            super(nom, prenom, age);
+            this.id = id;
+            this.filiere = filiere;
+            this.groupe = groupe;
+        }
+    }
+
+    const API = "/api/stagiaires";
+
+    // ================= AFFICHER =================
+    function loadData() {
+        fetch(API)
+            .then(res => res.json())
+            .then(data => {
+                let html = "";
+                data.forEach(s => {
+                    html += `
+                    <tr>
+                        <td>${s.id}</td>
+                        <td>${s.nom}</td>
+                        <td>${s.prenom}</td>
+                        <td>${s.age || ''}</td>
+                        <td>${s.filiere}</td>
+                        <td>${s.groupe}</td>
+                        <td>
+                            <button class="btn-del" onclick="deleteStagiaire('${s.id}')">Supprimer</button>
+                        </td>
+                    </tr>`;
+                });
+                document.getElementById("table").innerHTML = html;
+            });
+    }
+
+    // ================= AJOUTER =================
+    function addStagiaire() {
+        const id = document.getElementById("id").value;
+        const nom = document.getElementById("nom").value;
+        const prenom = document.getElementById("prenom").value;
+        const age = document.getElementById("age").value;
+        const filiere = document.getElementById("filiere").value;
+        const groupe = document.getElementById("groupe").value;
+
+        if(!id || !nom) return alert("ID et Nom requis!");
+
+        const s = new Stagiaire(nom, prenom, age, id, filiere, groupe);
+
+        fetch(API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(s)
+        }).then(() => {
+            loadData();
+        
+            document.querySelectorAll('input').forEach(i => i.value = "");
+        });
+    }
+
+    // ================= SUPPRIMER =================
+    function deleteStagiaire(id) {
+        if(confirm("Supprimer?")) {
+            fetch(API + "/" + id, {
+                method: "DELETE"
+            }).then(() => loadData());
+        }
+    }
+
+    // ================= MODIFIER =================
+    function updateStagiaire() {
+        const id = document.getElementById("mid").value;
+        const filiere = document.getElementById("mfiliere").value;
+        const groupe = document.getElementById("mgroupe").value;
+
+    
+        fetch(API)
+            .then(res => res.json())
+            .then(data => {
+                const stagiaireOriginal = data.find(s => s.id == id);
+                if(!stagiaireOriginal) return alert("Stagiaire introuvable!");
+
+                
+                stagiaireOriginal.filiere = filiere || stagiaireOriginal.filiere;
+                stagiaireOriginal.groupe = groupe || stagiaireOriginal.groupe;
+
+                fetch(API + "/" + id, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(stagiaireOriginal)
+                }).then(() => {
+                    loadData();
+                    document.getElementById("mid").value = "";
+                    document.getElementById("mfiliere").value = "";
+                    document.getElementById("mgroupe").value = "";
+                });
+            });
+    }
+
+    loadData();
+</script>
+</body>
+</html>

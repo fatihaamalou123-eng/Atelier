@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestion des formateurs</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        input { margin-bottom: 10px; padding: 5px; }
+        li { background: #eee; margin: 5px 0; padding: 10px; list-style: none; }
+        button { margin-left: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<h2>Ajouter un formateur</h2>
+<form id="form">
+    <input id="id" placeholder="Matricule (ID)" required><br>
+    <input id="nom" placeholder="Nom" required><br>
+    <input id="prenom" placeholder="Prénom" required><br>
+    <input id="age" type="number" placeholder="Age" required><br>
+    <input id="specialite" placeholder="Spécialité" required><br>
+    <input id="email" type="email" placeholder="Email" required><br>
+    <button type="submit">Ajouter Formateur</button>
+</form>
+
+<h2>Liste des formateurs</h2>
+<ul id="liste"></ul>
+
+<script>
+class Personne {
+    constructor(nom, prenom, age){
+        this.nom = nom;
+        this.prenom = prenom;
+        this.age = age;
+    }
+}
+
+class Formateur extends Personne {
+    constructor(nom, prenom, age, id, specialite, email){
+        super(nom, prenom, age);
+        this.id = id; 
+        this.specialite = specialite;
+        this.email = email;
+    }
+}
+
+const API_URL = "/api/formateurs";
+let formateurs = [];
+
+
+async function charger() {
+    const res = await fetch(API_URL);
+    formateurs = await res.json();
+    afficher();
+}
+
+function afficher(){
+    let liste = document.getElementById("liste");
+    liste.innerHTML = "";
+    formateurs.forEach(f => {
+        liste.innerHTML += `
+            <li>
+                <strong>[${f.id}]</strong> ${f.nom} ${f.prenom} - ${f.specialite}
+                <button onclick="modifier('${f.id}')">Modifier Nom</button>
+                <button onclick="supprimer('${f.id}')" style="color:red">Supprimer</button>
+            </li>
+        `;
+    });
+}
+
+document.getElementById("form").addEventListener("submit", async function(e){
+    e.preventDefault();
+
+    let f = new Formateur(
+        document.getElementById('nom').value,
+        document.getElementById('prenom').value,
+        document.getElementById('age').value,
+        document.getElementById('id').value,
+        document.getElementById('specialite').value,
+        document.getElementById('email').value
+    );
+
+    // API POST
+    await fetch(API_URL, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(f)
+    });
+
+    this.reset();
+    charger(); 
+});
+
+async function supprimer(id){
+    if(confirm("Supprimer ce formateur ?")) {
+        await fetch(API_URL + "/" + id, { method: "DELETE" });
+        charger();
+    }
+}
+
+async function modifier(id){
+    let nouveauNom = prompt("Nouveau nom :");
+    if(!nouveauNom) return;
+
+    
+    let f = formateurs.find(item => item.id == id);
+    if(f) {
+        f.nom = nouveauNom;
+        await fetch(API_URL + "/" + id, {
+            method: "PUT",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(f)
+        });
+        charger();
+    }
+}
+
+
+charger();
+</script>
+
+</body>
+</html>
